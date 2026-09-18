@@ -20,38 +20,39 @@ const criteriaSchema = z.object({
     scoreThreshold: z.number().min(0).max(100),
 });
 
+// read and load cv and criteria data
 export async function loadProfile(root: string): Promise<Profile> {
     const cvPath = join(root, CV_FILE);
     const profilePath = join(root, PROFILE_FILE);
 
-    const cv = (await readText(cvPath, `Crea ${CV_FILE} con tu hoja de vida en markdown.`)).trim();
+    const cv = (await readText(cvPath, `Create ${CV_FILE} with your markdown resume.`)).trim();
     if (cv.length === 0) {
-        throw new ConfigError(`${cvPath} está vacío. Pega ahí tu hoja de vida en markdown.`);
+        throw new ConfigError(`${cvPath} is empty. Paste your resume in markdown format there.`);
     }
 
-    const raw = await readText(profilePath, `Copia src/examples/profile.example.yml a ${PROFILE_FILE} y ajústalo.`);
+    const raw = await readText(profilePath, `Copy src/examples/profile.example.yml to ${PROFILE_FILE} and adjust it.`);
     const criteria = parseCriteria(raw, profilePath);
 
     return { cv, criteria };
 }
 
+// load criteria data and parse it in yaml format, validating it against the expected schema
 function parseCriteria(raw: string, path: string): HardCriteria {
     let document: unknown;
     try {
         document = parseYaml(raw);
     } catch (error) {
-        throw new ConfigError(`${path} no es YAML válido: ${(error as Error).message}`);
+        throw new ConfigError(`${path} is not valid YAML: ${(error as Error).message}`);
     }
 
     const parsed = criteriaSchema.safeParse(document);
     if (!parsed.success) {
         const issues = parsed.error.issues
-            .map((issue) => `  - ${issue.path.join('.') || '(raíz)'}: ${issue.message}`)
+            .map((issue) => `  - ${issue.path.join('.') || '(root)'}: ${issue.message}`)
             .join('\n');
-        throw new ConfigError(`${path} no cumple el formato esperado:\n${issues}`);
+        throw new ConfigError(`${path} does not meet the expected format:\n${issues}`);
     }
 
-    // exactOptionalPropertyTypes prohíbe la clave presente con valor undefined
     const { minimumSalaryUsd, ...rest } = parsed.data;
     return minimumSalaryUsd === undefined ? rest : { ...rest, minimumSalaryUsd };
 }
@@ -61,10 +62,10 @@ async function readText(path: string, hint: string): Promise<string> {
         return await readFile(path, 'utf8');
     } catch (error) {
         if (isErrno(error) && error.code === 'ENOENT') {
-            throw new ConfigError(`No encontré ${path}. ${hint}`);
+            throw new ConfigError(`File not found: ${path}. ${hint}`);
         }
         if (isErrno(error) && error.code === 'EACCES') {
-            throw new ConfigError(`No tengo permiso para leer ${path}.`);
+            throw new ConfigError(`No permission to read ${path}.`);
         }
         throw error;
     }
