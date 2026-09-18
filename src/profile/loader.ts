@@ -1,0 +1,76 @@
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { parse as parseYaml } from 'yaml';
+import { z } from 'zod';
+import { ConfigError } from '../core/errors.js';
+import type { HardCriteria, Profile } from '../core/types.js';
+
+const CV_FILE = 'cv.md';
+const PROFILE_FILE = 'profile.yml';
+
+const nonEmptyStrings = z.array(z.string().trim().min(1));
+
+const criteriaSchema = z.object({
+    seniorityLevels: nonEmptyStrings.min(1),
+    workModes: z.array(z.enum(['remote', 'onsite', 'hybrid'])).min(1),
+    locations: nonEmptyStrings.min(1),
+    minimumSalaryUsd: z.number().positive().optional(),
+    dealBreakers: nonEmptyStrings.default([]),
+    excludedKeywords: nonEmptyStrings.default([]),
+    scoreThreshold: z.number().min(0).max(100),
+});
+
+// read and load cv and criteria data
+export async function loadProfile(root: string): Promise<Profile> {
+    const cvPath = join(root, CV_FILE);
+    const profilePath = join(root, PROFILE_FILE);
+
+    const cv = (await readText(cvPath, `Create ${CV_FILE} with your markdown resume.`)).trim();
+    if (cv.length === 0) {
+        throw new ConfigError(`${cvPath} is empty. Paste your resume in markdown format there.`);
+    }
+
+    const raw = await readText(profilePath, `Copy src/examples/profile.example.yml to ${PROFILE_FILE} and adjust it.`);
+    const criteria = parseCriteria(raw, profilePath);
+
+    return { cv, criteria };
+}
+
+// load criteria data and parse it in yaml format, validating it against the expected schema
+function parseCriteria(raw: string, path: string): HardCriteria {
+    let document: unknown;
+    try {
+        document = parseYaml(raw);
+    } catch (error) {
+        throw new ConfigError(`${path} is not valid YAML: ${(error as Error).message}`);
+    }
+
+    const parsed = criteriaSchema.safeParse(document);
+    if (!parsed.success) {
+        const issues = parsed.error.issues
+            .map((issue) => `  - ${issue.path.join('.') || '(root)'}: ${issue.message}`)
+            .join('\n');
+        throw new ConfigError(`${path} does not meet the expected format:\n${issues}`);
+    }
+
+    const { minimumSalaryUsd, ...rest } = parsed.data;
+    return minimumSalaryUsd === undefined ? rest : { ...rest, minimumSalaryUsd };
+}
+
+async function readText(path: string, hint: string): Promise<string> {
+    try {
+        return await readFile(path, 'utf8');
+    } catch (error) {
+        if (isErrno(error) && error.code === 'ENOENT') {
+            throw new ConfigError(`File not found: ${path}. ${hint}`);
+        }
+        if (isErrno(error) && error.code === 'EACCES') {
+            throw new ConfigError(`No permission to read ${path}.`);
+        }
+        throw error;
+    }
+}
+
+function isErrno(error: unknown): error is NodeJS.ErrnoException {
+    return error instanceof Error && 'code' in error;
+}

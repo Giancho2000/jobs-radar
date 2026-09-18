@@ -1,0 +1,9 @@
+seniorityLevels: [mid, senior]
+workModes: [remote, hybrid]
+locations: [Colombia, LATAM, Remote]
+minimumSalaryUsd: 3500
+dealBreakers:
+  - onsite outside Valle del Cauca
+  - primary stack is PHP or .NET Framework
+excludedKeywords: [internship, trainee, apprentice]
+scoreThreshold: 75
