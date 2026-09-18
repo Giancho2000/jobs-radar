@@ -1,15 +1,29 @@
 {
   "name": "jobs-radar",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Job search and monitoring service: reads your CV, queries vacancy sources, scores the match with an LLM and writes a daily markdown digest.",
   "type": "module",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
-  "description": "",
+  "author": "",
+  "keywords": [
+    "jobs",
+    "job-search",
+    "ats",
+    "greenhouse",
+    "lever",
+    "ashby",
+    "llm"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "yaml": "^2.9.1",
+    "zod": "^4.6.5"
+  },
   "devDependencies": {
     "@types/node": "^26.6.1",
     "eslint": "^10.10.0",
