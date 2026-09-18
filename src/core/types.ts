@@ -5,11 +5,11 @@ export interface RawVacancy {
     source: string;
     title: string;
     company: string;
-    location?: string
+    location?: string;
     remote?: boolean;
     description?: string;
     applyUrl: string;
-    postedAt?: Date
+    postedAt?: Date;
 }
 
 export interface Vacancy extends RawVacancy {
@@ -18,7 +18,7 @@ export interface Vacancy extends RawVacancy {
     seenAt: Date;
 }
 
-export type Verdict =  'apply' | 'view' | 'save';
+export type Verdict = 'apply' | 'view' | 'save';
 export type Confidence = 'high' | 'medium' | 'low';
 
 export interface Score {
@@ -28,7 +28,7 @@ export interface Score {
     criticalGaps: string[];
     minorGaps: string[];
     redFlags: string[];
-    missingAtKeywords: string[];
+    missingAtsKeywords: string[];
     verdict: Verdict;
     reason: string;
 }
@@ -38,14 +38,16 @@ export interface ScoredVacancy {
     score: Score;
 }
 
+export type WorkMode = 'remote' | 'onsite' | 'hybrid';
+
 export interface HardCriteria {
-    seniority: string[];
-    mode: Array<'remote' | 'onsite' | 'hybrid'>;
+    seniorityLevels: string[];
+    workModes: WorkMode[];
     locations: string[];
     minimumSalaryUsd?: number;
     dealBreakers: string[];
-    ExcludeKeywords: string[];
-    umbralScore: number;
+    excludedKeywords: string[];
+    scoreThreshold: number;
 }
 
 export interface Profile {
