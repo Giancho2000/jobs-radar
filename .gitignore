@@ -1,1 +1,11 @@
 /node_modules
+/dist
+
+/cv.md
+/profile.yml
+
+/out
+/data
+
+/.claude/
+/jobsradar.md
