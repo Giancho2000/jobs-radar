@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Job search and monitoring service: reads your CV, queries vacancy sources, scores the match with an LLM and writes a daily markdown digest.",
   "type": "module",
+  "engines": {
+    "node": ">=22.5"
+  },
   "license": "ISC",
   "author": "",
   "keywords": [
