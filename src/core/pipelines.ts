@@ -8,5 +8,5 @@ export async function run(
     profile: Profile,
     ctx: RunContext
 ): Promise<void> {
-    throw new Error('pipeline no implemented');
+    throw new Error('pipeline not implemented');
 }
