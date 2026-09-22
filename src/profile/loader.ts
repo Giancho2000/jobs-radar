@@ -10,7 +10,7 @@ const PROFILE_FILE = 'profile.yml';
 
 const nonEmptyStrings = z.array(z.string().trim().min(1));
 
-const criteriaSchema = z.object({
+const criteriaSchema = z.strictObject({
     seniorityLevels: nonEmptyStrings.min(1),
     workModes: z.array(z.enum(['remote', 'onsite', 'hybrid'])).min(1),
     locations: nonEmptyStrings.min(1),
@@ -53,7 +53,7 @@ function parseCriteria(raw: string, path: string): HardCriteria {
         throw new ConfigError(`${path} does not meet the expected format:\n${issues}`);
     }
 
-    const { minimumSalaryUsd, ...rest } = parsed.data;
+    const { minimumSalaryUsd, ...rest } = parsed.data; // exactOptionalPropertyTypes does not allow the key to be present with a value of undefined
     return minimumSalaryUsd === undefined ? rest : { ...rest, minimumSalaryUsd };
 }
 
