@@ -1,6 +1,8 @@
 seniorityLevels: [mid, senior]
 workModes: [remote, hybrid]
-locations: [Colombia, LATAM, Remote]
+# Locations are matched as whole words against what the source publishes. A country does not imply
+# its cities, so list the cities you would take as well.
+locations: [Colombia, Cali, Bogota, LATAM, Remote]
 minimumSalaryUsd: 3500
 dealBreakers:
   - onsite outside Valle del Cauca
