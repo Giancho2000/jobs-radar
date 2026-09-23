@@ -19,12 +19,13 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "start": "tsx --disable-warning=ExperimentalWarning src/cli/index.ts",
     "doctor": "tsx --disable-warning=ExperimentalWarning src/cli/index.ts doctor",
-    "demo": "tsx --disable-warning=ExperimentalWarning src/cli/index.ts demo"
+    "demo": "tsx --disable-warning=ExperimentalWarning src/cli/index.ts demo",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",

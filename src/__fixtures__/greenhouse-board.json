@@ -1,0 +1,40 @@
+{
+  "_comment": "Trimmed from a real answer of https://boards-api.greenhouse.io/v1/boards/wise/jobs?content=true. The content field keeps the double escaping the API really sends: HTML entities inside a string that is itself HTML escaped. The last two entries are not real, they are the shapes that have to survive: a job older than the window, and a job the API should never send but that must not take the board down with it.",
+  "jobs": [
+    {
+      "id": 6145567004,
+      "title": "Supplemental Sales Agent - Chicago, IL",
+      "absolute_url": "https://job-boards.greenhouse.io/wise/jobs/6145567004",
+      "updated_at": "2026-09-01T13:00:48-04:00",
+      "first_published": "2026-08-17T14:19:00-04:00",
+      "company_name": "Wise Worksite Field Sales ",
+      "location": { "name": "Chicago, IL" },
+      "content": "&lt;p&gt;Horace Mann is looking for individuals who want to work with purpose. R&amp;amp;D and benefits.&amp;nbsp;&lt;/p&gt;\n&lt;ul&gt;&lt;li&gt;Node.js&lt;/li&gt;&lt;li&gt;PostgreSQL&lt;/li&gt;&lt;/ul&gt;"
+    },
+    {
+      "id": 6146524004,
+      "title": "Sr. Backend Engineer (m/f/d) - Remote",
+      "absolute_url": "https://job-boards.greenhouse.io/wise/jobs/6146524004",
+      "updated_at": "2026-09-18T14:49:29-04:00",
+      "first_published": null,
+      "company_name": null,
+      "location": { "name": "Remote - LATAM" },
+      "content": "&lt;p&gt;Caf&amp;eacute; included.&lt;/p&gt;"
+    },
+    {
+      "id": 1111111111,
+      "title": "Ancient Role Nobody Closed",
+      "absolute_url": "https://job-boards.greenhouse.io/wise/jobs/1111111111",
+      "updated_at": "2023-01-04T09:00:00-05:00",
+      "first_published": "2023-01-04T09:00:00-05:00",
+      "company_name": "Wise Worksite Field Sales ",
+      "location": { "name": "Chicago, IL" },
+      "content": "&lt;p&gt;Still open somehow.&lt;/p&gt;"
+    },
+    {
+      "id": "not-a-number",
+      "title": "",
+      "absolute_url": "nonsense"
+    }
+  ]
+}

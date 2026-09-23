@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { parseArgs } from 'node:util';
 import { ConfigError, ScoringError, StoreError } from '../core/errors.js';
 import { demo } from './demo.js';

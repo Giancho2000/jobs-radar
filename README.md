@@ -30,6 +30,7 @@ The project is being built commit by commit. It runs end to end today, against G
 | Daily rotation and history | Done |
 | The pipeline that joins all of it | Done |
 | CLI: run, watch, demo, doctor | Done |
+| Tests and fixtures | Done |
 | Lever, Ashby and Gmail sources | Not yet |
 
 Greenhouse is the only source so far, so this reads public ATS boards and nothing else yet. The
@@ -415,7 +416,8 @@ src/
   scoring/      prompt, provider adapters, retry policy
   sinks/        the markdown file and the rotation into history
   store/        the SQLite dedup store
-  examples/     profile.example.yml
+  examples/     the two config files to copy
+  __fixtures__/ a real Greenhouse answer, trimmed, for the tests
 ```
 
 The architecture is ports and adapters. `src/core/` defines the ports (`SourcePort`, `ScorerPort`,
@@ -427,23 +429,45 @@ touch the core.
 
 ```
 npm run typecheck
-npm run build
 npm test
+npm run build
 ```
 
 TypeScript is strict, including `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`. The
 project is ESM, so relative imports carry the `.js` extension. Every external input, meaning config
 files, API responses and model output, is validated with zod before it is trusted.
 
+`npm run typecheck` covers the tests too; `npm run build` uses `tsconfig.build.json`, which leaves
+the tests and the fixtures out of `dist`.
+
+### Tests
+
+Vitest, with the test beside the file it tests: `src/core/filters.ts` is tested by
+`src/core/filters.test.ts`. There is no separate test folder to keep in sync.
+
+Nothing in the suite reaches the network or an API key. What would talk to something else is tested
+against the real thing in miniature:
+
+- The Greenhouse source runs against `src/__fixtures__/greenhouse-board.json`, trimmed from a real
+  answer of the boards API, double escaped HTML and all. It also holds a job older than the window
+  and a job the API should never send, because both have to be survived rather than crash a board.
+- Both model providers run against a real HTTP server started inside the test, so the request that
+  goes over the wire is the one under test: the endpoint, the headers, the JSON schema and the
+  retry after a malformed answer.
+- Everything that touches the filesystem uses a temporary directory, and the dedup store has an
+  in-memory mode.
+
+A test that needed a fake to be written only for it would not be earning its place. The fakes here
+are the pipeline's ports, which exist for this reason.
+
 ## Roadmap
 
 Done: project setup, domain types and ports, resume and profile loading, Greenhouse source,
 normalisation, SQLite dedup, hard filters, LLM scoring, the daily markdown file with everything
-you write into it preserved, rotation into a history file, the pipeline that produces it, and the
-command line.
+you write into it preserved, rotation into a history file, the pipeline that produces it, the
+command line, and a test suite that touches neither the network nor an API key.
 
-Next: Lever and Ashby sources, LinkedIn alerts through Gmail, enrichment through the ATS, parser
-fixtures and tests, CI.
+Next: Lever and Ashby sources, LinkedIn alerts through Gmail, enrichment through the ATS, CI.
 
 ## License
 
