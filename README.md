@@ -26,12 +26,17 @@ today:
 | Dedup store (SQLite) | Done |
 | Hard filters | Done |
 | LLM scoring (Claude, OpenAI, Ollama) | Done |
-| Markdown output | Not yet |
+| Daily markdown file | Done |
+| The pipeline that joins all of it | Done |
 | CLI | Not yet |
 | Lever, Ashby and Gmail sources | Not yet |
 
-There is no command to run yet. The pieces are tested individually; the pipeline that joins them is
-the next commit. The roadmap at the end of this file tracks the rest.
+There is no command to run yet: the pipeline works and is tested, but nothing calls it from a
+terminal until the CLI lands. The roadmap at the end of this file tracks the rest.
+
+One limitation worth knowing about while it lasts: the daily file is rewritten from scratch on
+every run, so two runs on the same day leave only what the second one found. The next commit makes
+a run merge into the existing file instead, which is also what restores your ticked checkboxes.
 
 ## How it works
 
@@ -66,7 +71,39 @@ structured: a score from 0 to 100, a confidence, the parts of the stack that mat
 and the minor gaps, any red flags, the keywords an ATS would look for and the resume does not have,
 and one sentence of reasoning.
 
-**Emit.** Everything at or above the threshold is written to a daily markdown file.
+**Emit.** Everything at or above the threshold is written to a daily markdown file. A vacancy is
+recorded as seen only after a sink has written it: if every sink fails, nothing is recorded and the
+whole batch comes back on the next run. A vacancy the model could not score is not recorded either,
+so it is tried again rather than lost.
+
+## The daily file
+
+One file per day, named after the date in your timezone, in the output directory:
+
+```markdown
+# Jobs radar 2026-09-22
+
+1 vacancy, best score 91.
+
+## Apply (1)
+
+- [ ] `91` **Sr. Node.js Engineer** at Nu Colombia S.A.S. - [apply](https://boards.io/1) <!-- greenhouse:1 -->
+    - Node, Postgres and TypeScript all match the resume.
+    - Matched: Node.js, PostgreSQL, TypeScript
+    - Minor gaps: Kubernetes
+    - Red flags: no salary published
+    - Missing for ATS: Kubernetes, Terraform
+    - remote - Remote - Colombia - posted today - via greenhouse - confidence high
+```
+
+Vacancies are grouped by the model's verdict, Apply first, and sorted by score inside each group.
+
+The HTML comment at the end of each line is the vacancy id. Your markdown editor does not render
+it, it survives a change of title, and it is how the next run finds the line again to restore a box
+you had already ticked.
+
+Every entry states how old the posting is. That is deliberate: LinkedIn alerts arrive daily, not
+instantly, and a line that hid its age would be misleading.
 
 ## Requirements
 
@@ -255,13 +292,15 @@ src/
   profile/      loads cv.md and profile.yml
   sources/      one adapter per vacancy source
   scoring/      prompt, provider adapters, retry policy
+  sinks/        one adapter per output
   store/        the SQLite dedup store
   examples/     profile.example.yml
 ```
 
 The architecture is ports and adapters. `src/core/` defines the ports (`SourcePort`, `ScorerPort`,
-`SinkPort`, `DedupStore`) and imports nothing from `sources/`, `scoring/` or `store/`. Adding a
-source or swapping a provider does not touch the core.
+`SinkPort`, `DedupStore`), holds the pipeline that orchestrates them, and imports nothing from
+`sources/`, `scoring/`, `sinks/` or `store/`. Adding a source, an output or a provider does not
+touch the core.
 
 ## Development
 
@@ -278,11 +317,11 @@ files, API responses and model output, is validated with zod before it is truste
 ## Roadmap
 
 Done: project setup, domain types and ports, resume and profile loading, Greenhouse source,
-normalisation, SQLite dedup, hard filters, LLM scoring.
+normalisation, SQLite dedup, hard filters, LLM scoring, the daily markdown file and the pipeline
+that produces it.
 
-Next: markdown output, checkbox preservation across runs, daily rotation and history, Lever and
-Ashby sources, LinkedIn alerts through Gmail, enrichment through the ATS, the CLI, parser fixtures
-and tests, CI.
+Next: checkbox preservation across runs, daily rotation and history, Lever and Ashby sources,
+LinkedIn alerts through Gmail, enrichment through the ATS, the CLI, parser fixtures and tests, CI.
 
 ## License
 
