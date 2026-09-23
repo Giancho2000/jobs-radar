@@ -28,6 +28,7 @@ today:
 | LLM scoring (Claude, OpenAI, Ollama) | Done |
 | Daily markdown file | Done |
 | Checkbox and note preservation | Done |
+| Daily rotation and history | Done |
 | The pipeline that joins all of it | Done |
 | CLI | Not yet |
 | Lever, Ashby and Gmail sources | Not yet |
@@ -118,6 +119,34 @@ Two guards, because this is a file you own and the program only visits it:
   today's.
 - If the file of the day exists and was not written by this program, the run fails with that
   message instead of replacing it.
+
+### Old days move into history.md
+
+The output directory keeps the last 14 days as their own file. Anything older is moved into
+`history.md`, newest day first, as a section per day:
+
+```markdown
+# Jobs radar history
+
+## 2026-09-02
+
+1 vacancy, best score 89.
+
+### Apply (1)
+
+- [ ] `89` **Engineer** at Acme - [apply](https://boards.io/2) <!-- greenhouse:2 -->
+    ...
+```
+
+The day is moved whole. The ticked boxes, the notes you wrote and the headings you added all go
+with it, one heading level down. Nothing is summarised away and nothing is deleted: the record of
+what you applied to is the reason to keep the file at all.
+
+A file in the output directory that this program did not write is never archived, whatever its
+name. Rotation is also housekeeping, not delivery: if it fails, the run still counts as delivered
+and you get a warning, because today's file was already written.
+
+To keep every day as its own file, build the sink with `retentionDays: 0`.
 
 ## Requirements
 
@@ -306,7 +335,7 @@ src/
   profile/      loads cv.md and profile.yml
   sources/      one adapter per vacancy source
   scoring/      prompt, provider adapters, retry policy
-  sinks/        one adapter per output
+  sinks/        the markdown file and the rotation into history
   store/        the SQLite dedup store
   examples/     profile.example.yml
 ```
@@ -332,10 +361,10 @@ files, API responses and model output, is validated with zod before it is truste
 
 Done: project setup, domain types and ports, resume and profile loading, Greenhouse source,
 normalisation, SQLite dedup, hard filters, LLM scoring, the daily markdown file with everything
-you write into it preserved, and the pipeline that produces it.
+you write into it preserved, rotation into a history file, and the pipeline that produces it.
 
-Next: daily rotation and history, Lever and Ashby sources, LinkedIn alerts through Gmail,
-enrichment through the ATS, the CLI, parser fixtures and tests, CI.
+Next: Lever and Ashby sources, LinkedIn alerts through Gmail, enrichment through the ATS, the CLI,
+parser fixtures and tests, CI.
 
 ## License
 

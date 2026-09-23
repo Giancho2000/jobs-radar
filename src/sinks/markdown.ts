@@ -1,6 +1,8 @@
-import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
+import { mkdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { RunContext, ScoredVacancy, SinkPort, Verdict } from '../core/types.js';
+import { isErrno, writeAtomically } from './files.js';
+import { HISTORY_FILE, rotate } from './rotation.js';
 
 const MILLISECONDS_PER_DAY = 86_400_000;
 
@@ -29,7 +31,17 @@ interface PreviousFile {
     foreign: string[];
 }
 
-export function createMarkdownSink(): SinkPort {
+export interface MarkdownSinkOptions {
+    // Days kept as their own file in the output directory. Older ones move into history.md.
+    // Zero or less turns rotation off and keeps every daily file forever.
+    retentionDays?: number;
+}
+
+const DEFAULT_RETENTION_DAYS = 14;
+
+export function createMarkdownSink(options: MarkdownSinkOptions = {}): SinkPort {
+    const retentionDays = options.retentionDays ?? DEFAULT_RETENTION_DAYS;
+
     return {
         name: 'markdown',
 
@@ -42,6 +54,18 @@ export function createMarkdownSink(): SinkPort {
 
             await mkdir(ctx.outDir, { recursive: true });
             await writeAtomically(path, render(entries, day, previous?.foreign ?? []));
+
+            // Housekeeping, not delivery. Today's file is already on disk, and failing the emit
+            // here would tell the pipeline that nothing was delivered.
+            try {
+                const archived = await rotate(ctx.outDir, day, retentionDays);
+                if (archived.length > 0) {
+                    console.log(`[markdown] ${archived.length} day(s) moved into ${HISTORY_FILE}`);
+                }
+            } catch (error) {
+                const detail = error instanceof Error ? error.message : String(error);
+                console.warn(`[markdown] could not rotate the old files: ${detail}`);
+            }
         },
     };
 }
@@ -273,13 +297,6 @@ function escape(value: string): string {
     return value.replace(/([\\`*_[\]<>])/g, '\\$1');
 }
 
-// A half written file is worse than an old one: this is the file the user reads every morning.
-async function writeAtomically(path: string, content: string): Promise<void> {
-    const temporary = `${path}.tmp`;
-    await writeFile(temporary, content, 'utf8');
-    await rename(temporary, path);
-}
-
 // The day the file is named after is the day where the user lives, not where the process runs.
 // en-CA is the shortest way to an ISO date out of Intl without pulling in a date library.
 export function formatDay(runAt: Date, timezone: string): string {
@@ -294,8 +311,4 @@ export function formatDay(runAt: Date, timezone: string): string {
         // An invalid timezone is not worth losing a run over
         return runAt.toISOString().slice(0, 10);
     }
-}
-
-function isErrno(error: unknown): error is NodeJS.ErrnoException {
-    return error instanceof Error && 'code' in error;
 }
