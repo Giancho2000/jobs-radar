@@ -15,9 +15,20 @@ import type {
 
 const MILLISECONDS_PER_DAY = 86_400_000;
 
-// How far back sources are asked to look. It is a safety net for a run that did not happen
-// yesterday, not the thing that prevents repeats: that is the dedup store.
-const LOOKBACK_DAYS = 7;
+// How far back sources are asked to look. It is not what prevents repeats, that is the dedup
+// store. It is only here because an ATS keeps a role open for weeks and there is no point paying
+// to judge one that has been sitting there for months.
+const DEFAULT_LOOKBACK_DAYS = 30;
+
+// The real protection against an expensive first run. A window in days cannot give that: three
+// boards can publish four vacancies or four hundred in the same week. Whatever does not fit is
+// not recorded as seen, so the next run picks it up.
+const DEFAULT_MAX_SCORED = 40;
+
+export interface RunOptions {
+    lookbackDays?: number;
+    maxScored?: number;
+}
 
 // Enough to keep the wall clock down, low enough not to trip rate limits. The first few requests
 // of a run all miss the prompt cache because none of them has finished writing it yet.
@@ -31,6 +42,7 @@ export interface RunSummary {
     rejectedByRule: Record<FilterRule, number>;
     scored: number;
     failedToScore: number;
+    heldForNextRun: number;
     emitted: number;
 }
 
@@ -40,16 +52,23 @@ export async function run(
     sinks: SinkPort[],
     store: DedupStore,
     profile: Profile,
-    ctx: RunContext
+    ctx: RunContext,
+    options: RunOptions = {}
 ): Promise<RunSummary> {
-    const since = new Date(ctx.runAt.getTime() - LOOKBACK_DAYS * MILLISECONDS_PER_DAY);
+    const lookbackDays = options.lookbackDays ?? DEFAULT_LOOKBACK_DAYS;
+    const maxScored = options.maxScored ?? DEFAULT_MAX_SCORED;
+    const since = new Date(ctx.runAt.getTime() - lookbackDays * MILLISECONDS_PER_DAY);
 
     const raw = await ingest(sources, since);
     const vacancies = dedupeBatch(normalizeAll(raw, ctx.runAt));
     const fresh = await onlyNew(vacancies, store);
     const { kept, rejected } = applyHardFilters(fresh, profile.criteria);
 
-    const { scored, failed } = await scoreAll(kept, scorer, profile);
+    // Newest first, so that what a capped run does look at is the part worth looking at.
+    const candidates = [...kept].sort(byNewest);
+    const budgeted = maxScored > 0 ? candidates.slice(0, maxScored) : candidates;
+
+    const { scored, failed } = await scoreAll(budgeted, scorer, profile);
     const emitted = scored.filter((item) => item.score.value >= profile.criteria.scoreThreshold);
 
     const delivered = await emit(sinks, emitted, ctx);
@@ -74,6 +93,7 @@ export async function run(
         rejectedByRule: countByRule(rejected.map((rejection) => rejection.rule)),
         scored: scored.length,
         failedToScore: failed,
+        heldForNextRun: candidates.length - budgeted.length,
         emitted: emitted.length,
     };
 }
@@ -120,7 +140,8 @@ async function scoreAll(
             scored.push({ vacancy, score: await scorer.score(vacancy, profile) });
         } catch (error) {
             failed += 1;
-            console.warn(`[pipeline] could not score "${vacancy.title}": ${asMessage(error)}`);
+            // The scorer already names the vacancy in its message, so this does not repeat it.
+            console.warn(`[pipeline] ${asMessage(error)}`);
         }
     });
 
@@ -164,6 +185,11 @@ async function mapWithConcurrency<T>(
     });
 
     await Promise.all(runners);
+}
+
+function byNewest(left: Vacancy, right: Vacancy): number {
+    // A vacancy with no date is not necessarily old, but it cannot claim to be new either.
+    return (right.postedAt?.getTime() ?? 0) - (left.postedAt?.getTime() ?? 0);
 }
 
 function countByRule(rules: FilterRule[]): Record<FilterRule, number> {

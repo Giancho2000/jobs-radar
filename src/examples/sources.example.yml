@@ -1,0 +1,8 @@
+# Greenhouse board tokens. The token is the last part of the board url:
+# https://job-boards.greenhouse.io/gitlab -> gitlab
+# Not every company uses Greenhouse, and a wrong token answers 404: run "jobs-radar doctor" after
+# editing this file and it will tell you whether the first board is real and how many roles it has.
+greenhouse:
+  - gitlab
+  - cloudflare
+  - stripe

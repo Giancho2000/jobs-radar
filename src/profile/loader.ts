@@ -22,18 +22,27 @@ const criteriaSchema = z.strictObject({
 
 // read and load cv and criteria data
 export async function loadProfile(root: string): Promise<Profile> {
-    const cvPath = join(root, CV_FILE);
-    const profilePath = join(root, PROFILE_FILE);
+    return { cv: await loadCv(root), criteria: await loadCriteria(root) };
+}
 
-    const cv = (await readText(cvPath, `Create ${CV_FILE} with your markdown resume.`)).trim();
+// The two halves load on their own so that doctor can report on each without the failure of one
+// hiding the state of the other.
+export async function loadCv(root: string): Promise<string> {
+    const path = join(root, CV_FILE);
+
+    const cv = (await readText(path, `Create ${CV_FILE} with your markdown resume.`)).trim();
     if (cv.length === 0) {
-        throw new ConfigError(`${cvPath} is empty. Paste your resume in markdown format there.`);
+        throw new ConfigError(`${path} is empty. Paste your resume in markdown format there.`);
     }
 
-    const raw = await readText(profilePath, `Copy src/examples/profile.example.yml to ${PROFILE_FILE} and adjust it.`);
-    const criteria = parseCriteria(raw, profilePath);
+    return cv;
+}
 
-    return { cv, criteria };
+export async function loadCriteria(root: string): Promise<HardCriteria> {
+    const path = join(root, PROFILE_FILE);
+    const raw = await readText(path, `Copy src/examples/profile.example.yml to ${PROFILE_FILE} and adjust it.`);
+
+    return parseCriteria(raw, path);
 }
 
 // load criteria data and parse it in yaml format, validating it against the expected schema

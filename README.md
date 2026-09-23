@@ -14,8 +14,7 @@ key.
 
 ## Status
 
-The project is being built commit by commit and it is not runnable end to end yet. What exists
-today:
+The project is being built commit by commit. It runs end to end today, against Greenhouse:
 
 | Piece | State |
 | --- | --- |
@@ -30,11 +29,46 @@ today:
 | Checkbox and note preservation | Done |
 | Daily rotation and history | Done |
 | The pipeline that joins all of it | Done |
-| CLI | Not yet |
+| CLI: run, watch, demo, doctor | Done |
 | Lever, Ashby and Gmail sources | Not yet |
 
-There is no command to run yet: the pipeline works and is tested, but nothing calls it from a
-terminal until the CLI lands. The roadmap at the end of this file tracks the rest.
+Greenhouse is the only source so far, so this reads public ATS boards and nothing else yet. The
+roadmap at the end of this file tracks the rest.
+
+## Quick start
+
+See what it produces, with no key, no network and nothing written to your real output:
+
+```
+npm install
+npm run demo
+```
+
+Then set it up for yourself:
+
+```
+cp src/examples/profile.example.yml profile.yml
+cp src/examples/sources.example.yml sources.yml
+# write your resume into cv.md
+npm run doctor
+npm start run
+```
+
+`doctor` checks everything a run needs and spends nothing: it reads your files, resolves the model
+provider and asks the Greenhouse API about the first board in your list. It exits non-zero when
+something is missing, so a cron entry can use it as a guard.
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `jobs-radar run` | Read the sources once, score what is new, write the file of the day. |
+| `jobs-radar watch` | The same, every `JOBS_RADAR_WATCH_MINUTES` minutes, until Ctrl+C. |
+| `jobs-radar demo` | Produce a file from made up vacancies. No key, no network, nothing recorded. |
+| `jobs-radar doctor` | Check the configuration. Costs nothing, exits 1 if a run would fail. |
+
+Before `npm run build`, run them through the sources with `npm start <command>`; `watch` also takes
+`--every <minutes>`.
 
 ## How it works
 
@@ -146,7 +180,7 @@ A file in the output directory that this program did not write is never archived
 name. Rotation is also housekeeping, not delivery: if it fails, the run still counts as delivered
 and you get a warning, because today's file was already written.
 
-To keep every day as its own file, build the sink with `retentionDays: 0`.
+To keep every day as its own file, set `JOBS_RADAR_RETENTION_DAYS=0`.
 
 ## Requirements
 
@@ -164,7 +198,8 @@ npm install
 
 ## Configure your profile
 
-Two files at the root of the project. Neither one is versioned, and both are in `.gitignore`.
+Three files at the root of the project. None of them is versioned, and all three are in
+`.gitignore`.
 
 ### cv.md
 
@@ -206,6 +241,26 @@ scoreThreshold: 75
 
 Unknown fields are rejected rather than ignored, so a typo in a key fails loudly instead of quietly
 disabling a criterion.
+
+### sources.yml
+
+Where to look. Greenhouse boards are listed by their token, which is the last part of the board
+url: `https://job-boards.greenhouse.io/gitlab` is the token `gitlab`.
+
+```yaml
+greenhouse:
+  - gitlab
+  - cloudflare
+  - stripe
+```
+
+Not every company uses Greenhouse, and a token that does not exist answers 404. A board that fails
+produces a warning and the run continues with the others, so a wrong token costs you that company
+and nothing else. `doctor` checks the first board in the list and tells you how many roles it has
+open, which is the fastest way to find out you guessed a token wrong.
+
+This is a separate file from `profile.yml` because that one describes you, and this one describes
+the search. It is gitignored for the same reason: where you are looking for work is your business.
 
 ## Configure the AI provider
 
@@ -276,6 +331,28 @@ export JOBS_RADAR_LLM_BASE_URL=https://openrouter.ai/api/v1
 export JOBS_RADAR_LLM_MODEL=the-model-the-gateway-expects
 ```
 
+## Everything else you can set
+
+Paths and cadence come from the environment too, so one install can be pointed at a different
+folder from a cron entry without editing a file.
+
+| Variable | Default | What it does |
+| --- | --- | --- |
+| `JOBS_RADAR_ROOT` | the working directory | Where `cv.md`, `profile.yml` and `sources.yml` live. |
+| `JOBS_RADAR_OUT_DIR` | `out` | Where the daily files and `history.md` are written. |
+| `JOBS_RADAR_DATA_DIR` | `data` | Where the dedup database lives. |
+| `JOBS_RADAR_TIMEZONE` | your system timezone | Which day the file is named after. |
+| `JOBS_RADAR_RETENTION_DAYS` | `14` | Days kept as their own file before moving into `history.md`. 0 keeps them all. |
+| `JOBS_RADAR_WATCH_MINUTES` | `5` | How often `watch` runs. |
+| `JOBS_RADAR_SINCE_DAYS` | `30` | How far back a source is asked to look. |
+| `JOBS_RADAR_MAX_SCORED` | `40` | The most vacancies one run will send to the model. 0 removes the ceiling. |
+
+`JOBS_RADAR_MAX_SCORED` is the one that decides what a run can cost. An ATS keeps roles open for
+weeks, so the first run against a few large boards can find hundreds of vacancies at once; the
+ceiling scores the newest of them and leaves the rest for the next run, unrecorded, rather than
+billing you for all of them at once. A window in days cannot do that job: three boards can publish
+four vacancies in a week or four hundred.
+
 ## What is filtered in code and what is left to the model
 
 The split is deliberate. Code decides what a machine can decide on its own, and everything else is
@@ -333,7 +410,8 @@ costs you nothing except the memory of what you have already been shown.
 src/
   core/         domain types, ports, and everything pure: normalize, dedup, filters
   profile/      loads cv.md and profile.yml
-  sources/      one adapter per vacancy source
+  cli/          the commands and the composition root
+  sources/      one adapter per vacancy source and the list of boards
   scoring/      prompt, provider adapters, retry policy
   sinks/        the markdown file and the rotation into history
   store/        the SQLite dedup store
@@ -361,10 +439,11 @@ files, API responses and model output, is validated with zod before it is truste
 
 Done: project setup, domain types and ports, resume and profile loading, Greenhouse source,
 normalisation, SQLite dedup, hard filters, LLM scoring, the daily markdown file with everything
-you write into it preserved, rotation into a history file, and the pipeline that produces it.
+you write into it preserved, rotation into a history file, the pipeline that produces it, and the
+command line.
 
-Next: Lever and Ashby sources, LinkedIn alerts through Gmail, enrichment through the ATS, the CLI,
-parser fixtures and tests, CI.
+Next: Lever and Ashby sources, LinkedIn alerts through Gmail, enrichment through the ATS, parser
+fixtures and tests, CI.
 
 ## License
 

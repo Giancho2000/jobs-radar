@@ -21,7 +21,10 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "start": "tsx --disable-warning=ExperimentalWarning src/cli/index.ts",
+    "doctor": "tsx --disable-warning=ExperimentalWarning src/cli/index.ts doctor",
+    "demo": "tsx --disable-warning=ExperimentalWarning src/cli/index.ts demo"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
@@ -36,5 +39,8 @@
     "tsx": "^4.23.13",
     "typescript": "^7.0.2",
     "vitest": "^5.0.1"
+  },
+  "bin": {
+    "jobs-radar": "./dist/cli/index.js"
   }
 }
