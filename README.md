@@ -27,16 +27,13 @@ today:
 | Hard filters | Done |
 | LLM scoring (Claude, OpenAI, Ollama) | Done |
 | Daily markdown file | Done |
+| Checkbox and note preservation | Done |
 | The pipeline that joins all of it | Done |
 | CLI | Not yet |
 | Lever, Ashby and Gmail sources | Not yet |
 
 There is no command to run yet: the pipeline works and is tested, but nothing calls it from a
 terminal until the CLI lands. The roadmap at the end of this file tracks the rest.
-
-One limitation worth knowing about while it lasts: the daily file is rewritten from scratch on
-every run, so two runs on the same day leave only what the second one found. The next commit makes
-a run merge into the existing file instead, which is also what restores your ticked checkboxes.
 
 ## How it works
 
@@ -104,6 +101,23 @@ you had already ticked.
 
 Every entry states how old the posting is. That is deliberate: LinkedIn alerts arrive daily, not
 instantly, and a line that hid its age would be misleading.
+
+### The file is yours to edit
+
+Several runs a day write to the same file, and the file is rewritten each time. What you did to it
+survives that:
+
+- A box you ticked stays ticked.
+- Anything you write under an entry is kept, verbatim, with the entry.
+- A heading you add yourself is kept at the end of the file.
+- A vacancy already in the file is never rewritten, so a later run cannot overwrite your notes.
+
+Two guards, because this is a file you own and the program only visits it:
+
+- The write is atomic. A run that dies halfway leaves yesterday's file intact rather than half of
+  today's.
+- If the file of the day exists and was not written by this program, the run fails with that
+  message instead of replacing it.
 
 ## Requirements
 
@@ -317,11 +331,11 @@ files, API responses and model output, is validated with zod before it is truste
 ## Roadmap
 
 Done: project setup, domain types and ports, resume and profile loading, Greenhouse source,
-normalisation, SQLite dedup, hard filters, LLM scoring, the daily markdown file and the pipeline
-that produces it.
+normalisation, SQLite dedup, hard filters, LLM scoring, the daily markdown file with everything
+you write into it preserved, and the pipeline that produces it.
 
-Next: checkbox preservation across runs, daily rotation and history, Lever and Ashby sources,
-LinkedIn alerts through Gmail, enrichment through the ATS, the CLI, parser fixtures and tests, CI.
+Next: daily rotation and history, Lever and Ashby sources, LinkedIn alerts through Gmail,
+enrichment through the ATS, the CLI, parser fixtures and tests, CI.
 
 ## License
 
